@@ -1,3 +1,6 @@
+#![no_std]
+
+/// Computes total size of all provided const arrays.
 #[macro_export]
 macro_rules! concat_arrays_size {
     ($( $array:tt ),*) => {{
@@ -5,11 +8,13 @@ macro_rules! concat_arrays_size {
     }};
 }
 
+/// Concatenates provided const arrays.
 #[macro_export]
 macro_rules! concat_arrays {
-    ($t:ty; $( $array:tt ),*; $init_value:expr) => {{
-        const ARRAY_SIZE: usize = $crate::concat_arrays_size!($($array),*);
-        let mut result = [$init_value; ARRAY_SIZE];
+    ($t:ty; $( $array:tt ),*; $init_value:expr) => ({
+        const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
+        const __CONCAT__: [$t; __ARRAY_SIZE__] = {
+        let mut result = [$init_value; __ARRAY_SIZE__];
         let mut result_index = 0;
 
         $(
@@ -20,16 +25,15 @@ macro_rules! concat_arrays {
                 index += 1;
         }
         )*
-        ["Initialization Failed"][(result_index != ARRAY_SIZE) as usize];
+        ["Initialization Failed"][(result_index != __ARRAY_SIZE__) as usize];
         result
-    }};
+        };
+        __CONCAT__
+    });
 }
-
 
 #[cfg(test)]
 mod tests {
-    extern crate alloc;
-    use alloc::vec::Vec;
     use super::*;
 
     #[test]
@@ -37,23 +41,14 @@ mod tests {
         const A: [u32; 3] = [1, 2, 3];
         const B: [u32; 3] = [4, 5, 6];
         const C: [u32; concat_arrays_size!(A, B)] = concat_arrays!(u32; A, B; u32::MIN);
-        assert_eq!(C[..], A.iter().chain(&B).copied().collect::<Vec<u32>>()[..]);
+        assert_eq!([1, 2, 3, 4, 5, 6], C);
     }
 
     #[test]
     fn test_different_sizes() {
         const A: [u32; 3] = [1, 2, 3];
         const B: [u32; 2] = [4, 5];
-        const C: [u32; concat_arrays_size!(A, B)] = concat_arrays!(i32; A, B; u32::MIN);
-        assert_eq!(C[..], A.iter().chain(&B).copied().collect::<Vec<u32>>()[..]);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_fails_with_non_copy() {
-        struct S{v: bool}
-        const A: [S; 1] = [S{v: true}];
-        const B: [S; 1] = [S{v: false}];
-        const C: [S; concat_arrays_size!(A, B)] = concat_arrays!(S; A, B; S{v: false});
+        const C: [u32; concat_arrays_size!(A, B)] = concat_arrays!(u32; A, B; u32::MIN);
+        assert_eq!([1, 2, 3, 4, 5], C);
     }
 }
