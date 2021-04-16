@@ -40,7 +40,7 @@ macro_rules! concat_arrays {
 macro_rules! concat_arrays_const {
     ($t:ty; $( $array:tt ),*; $init_value:expr) => ({
     const __CONCAT__: [$t; $crate::concat_arrays_size!($($array),*)] = {
-    concat_arrays!($t; $($array),*; $init_value)
+    $crate::concat_arrays!($t; $($array),*; $init_value)
     };
     __CONCAT__
     });
