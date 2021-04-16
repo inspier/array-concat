@@ -15,17 +15,23 @@ macro_rules! concat_arrays {
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
         const __CONCAT__: [$t; __ARRAY_SIZE__] = {
         let mut result = [$init_value; __ARRAY_SIZE__];
-        let mut result_index = 0;
 
-        $(
-        let mut index = 0;
-        while index < $array.len() {
-                result[result_index] = $array[index];
-                result_index += 1;
-                index += 1;
+        #[allow(non_snake_case)]
+        #[derive(Clone, Copy)]
+        struct Decomposed {
+        $($array: [$t; $array.len()],)*
         }
-        )*
-        ["Initialization Failed"][(result_index != __ARRAY_SIZE__) as usize];
+
+        union Composed {
+            full: [$t; __ARRAY_SIZE__],
+            decomposed: Decomposed,
+        }
+
+        let mut c = Composed { full: result };
+        $(c.decomposed.$array = $array;)*
+        unsafe {
+        result = c.full;
+        }
         result
         };
         __CONCAT__
