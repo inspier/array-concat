@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn test_simple_concat() {
         let d = concat_arrays!(u32; A, B; u32::MIN);
-        const D: [u32; concat_arrays_size!(A, B)] = concat_arrays!(u32; A, B; u32::MIN);
+        const D: [u32; concat_arrays_size!(A, B)] = concat_arrays_const!(u32; A, B; u32::MIN);
         assert_eq!([1, 2, 3, 4, 5, 6], D);
         assert_eq!([1, 2, 3, 4, 5, 6], d);
     }
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn test_different_sizes() {
         let e = concat_arrays!(u32; A, C; u32::MIN);
-        const E: [u32; concat_arrays_size!(A, C)] = concat_arrays!(u32; A, C; u32::MIN);
+        const E: [u32; concat_arrays_size!(A, C)] = concat_arrays_const!(u32; A, C; u32::MIN);
         assert_eq!([1, 2, 3, 4, 5], E);
         assert_eq!([1, 2, 3, 4, 5], e);
     }
