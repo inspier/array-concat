@@ -38,6 +38,7 @@ macro_rules! concat_arrays {
     });
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use super::*;
