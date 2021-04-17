@@ -7,7 +7,7 @@ Macros for concatenating const arrays.
 
 To add to your Cargo.toml:
 ```toml
-array-concat = "0.1.0"
+array-concat = "0.2.0"
 ```
 
 ## Example
