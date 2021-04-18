@@ -13,23 +13,29 @@ macro_rules! concat_arrays_size {
 macro_rules! concat_arrays {
     ($( $array:tt ),*; $init_value:expr) => ({
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
+        const fn __compare_sizes__<A, C>(_: &A, _: &C) -> bool {
+            core::mem::size_of::<A>() == core::mem::size_of::<C>()
+        }
         let mut result = [$init_value; __ARRAY_SIZE__];
 
         #[allow(non_snake_case)]
         #[derive(Clone, Copy)]
-        struct Decomposed<T: Copy> {
+        struct ArrayConcatDecomposed<T: Copy> {
         $($array: [T; $array.len()],)*
         }
 
-        union Composed<T: Copy> {
+        union ArrayConcatComposed<T: Copy> {
             full: [T; __ARRAY_SIZE__],
-            decomposed: Decomposed<T>,
+            decomposed: ArrayConcatDecomposed<T>,
         }
 
-        let mut c = Composed { full: result };
-        $(c.decomposed.$array = $array;)*
+        let mut composed = ArrayConcatComposed { full: result };
+        // Sanity check that the sizes of result and composed's decomposed field are the same
+        $(composed.decomposed.$array = $array;)*
+        ["Size mismatch"][!__compare_sizes__(&result, unsafe { &composed.decomposed }) as usize];
+        // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
         unsafe {
-        result = c.full;
+        result = composed.full;
         }
         result
     });
