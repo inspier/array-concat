@@ -13,15 +13,13 @@ macro_rules! concat_arrays_size {
 macro_rules! concat_arrays {
     ($( $array:tt ),*; $init_value:expr) => ({
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
-        const fn __compare_sizes__<A, C>(_: &A, _: &C) -> bool {
-            core::mem::size_of::<A>() == core::mem::size_of::<C>()
-        }
-        let mut result = [$init_value; __ARRAY_SIZE__];
+        let mut wrapper = $crate::internals::ArrayConcatWrapper { data: [$init_value; __ARRAY_SIZE__], _marker: core::marker::PhantomData };
 
         #[allow(non_snake_case)]
         #[derive(Clone, Copy)]
         struct ArrayConcatDecomposed<T: Copy> {
         $($array: [T; $array.len()],)*
+        _marker: core::marker::PhantomData<Self>,
         }
 
         union ArrayConcatComposed<T: Copy> {
@@ -29,16 +27,27 @@ macro_rules! concat_arrays {
             decomposed: ArrayConcatDecomposed<T>,
         }
 
-        let mut composed = ArrayConcatComposed { full: result };
+        let mut composed = ArrayConcatComposed { full: wrapper.data };
         // Sanity check that the sizes of result and composed's decomposed field are the same
         $(composed.decomposed.$array = $array;)*
-        ["Size mismatch"][!__compare_sizes__(&result, unsafe { &composed.decomposed }) as usize];
+        ["Size mismatch"][!$crate::internals::__compare_sizes__(wrapper._marker, unsafe { composed.decomposed._marker }) as usize];
+
         // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
-        unsafe {
-        result = composed.full;
-        }
-        result
+        wrapper.data = unsafe { composed.full };
+        wrapper.data
     });
+}
+
+#[doc(hidden)]
+pub mod internals {
+    pub struct ArrayConcatWrapper<T: Copy, const N: usize> {
+        pub data: [T; N],
+        pub _marker: core::marker::PhantomData<[T; N]>,
+    }
+
+    pub const fn __compare_sizes__<A, C>(_: core::marker::PhantomData<A>, _: core::marker::PhantomData<C>) -> bool {
+        core::mem::size_of::<A>() == core::mem::size_of::<C>()
+    }
 }
 
 #[allow(dead_code)]
