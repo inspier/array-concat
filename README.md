@@ -32,7 +32,7 @@ const F: [S; concat_arrays_size!(D, E)] = concat_arrays!(D, E; S{}); // doesn't 
 
 fn main() {
     let c = concat_arrays!(A, B; u32::MIN);
-    assert_eq!(C[..], A.iter().chain(&B).copied().collect::<Vec<u32>>()[..]);
-    assert_eq!(c[..], A.iter().chain(&B).copied().collect::<Vec<u32>>()[..]);
+    assert_eq!([1, 2, 3, 4, 5], C);
+    assert_eq!([1, 2, 3, 4, 5], c);
 }
 ```
