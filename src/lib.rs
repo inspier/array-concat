@@ -28,8 +28,8 @@ macro_rules! concat_arrays {
         }
 
         let mut composed = ArrayConcatComposed { full: wrapper.data };
-        // Sanity check that the sizes of result and composed's decomposed field are the same
         $(composed.decomposed.$array = $array;)*
+        // Sanity check that the "default" initialized buffer and composed's decomposed field are the same size
         ["Size mismatch"][!$crate::internals::__compare_sizes__(wrapper._marker, unsafe { composed.decomposed._marker }) as usize];
 
         // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
