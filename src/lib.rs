@@ -14,45 +14,30 @@ macro_rules! concat_arrays {
     ($( $array:tt ),*) => ({
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
 
-        #[allow(non_snake_case)]
-        #[derive(Clone, Copy)]
-        struct ArrayConcatDecomposed<T: Copy> {
+        #[allow(dead_code, non_snake_case)]
+        struct ArrayConcatDecomposed<T> {
         $($array: [T; $array.len()],)*
-        _marker: core::marker::PhantomData<Self>,
         }
 
-        union ArrayConcatComposed<T: Copy> {
-            full: $crate::internals::ArrayConcatWrapper<T, __ARRAY_SIZE__>,
-            decomposed: ArrayConcatDecomposed<T>,
+        union ArrayConcatComposed<T, const N: usize> {
+            full: core::mem::ManuallyDrop<[T; N]>,
+            decomposed: core::mem::ManuallyDrop<ArrayConcatDecomposed<T>>,
         }
 
-        let composed = ArrayConcatComposed { decomposed: ArrayConcatDecomposed { $($array,)* _marker: core::marker::PhantomData }};
+        impl<T, const N: usize> ArrayConcatComposed<T, N> {
+            const fn compare_sizes(&self) -> bool {
+                core::mem::size_of::<[T; N]>() == core::mem::size_of::<Self>()
+            }
+        }
+
+        let composed = ArrayConcatComposed { decomposed: core::mem::ManuallyDrop::new(ArrayConcatDecomposed { $($array,)* })};
 
         // Sanity check that composed's two fields are the same size
-        unsafe {
-        ["Size mismatch"][!$crate::internals::__compare_sizes__(composed.full._marker, composed.decomposed._marker) as usize];
+        ["Size mismatch"][!composed.compare_sizes() as usize];
 
         // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
-        composed.full.data
-        }
+        core::mem::ManuallyDrop::into_inner(unsafe { composed.full })
     });
-}
-
-#[doc(hidden)]
-pub mod internals {
-    #[derive(Clone, Copy)]
-    #[repr(transparent)]
-    pub struct ArrayConcatWrapper<T: Copy, const N: usize> {
-        pub data: [T; N],
-        pub _marker: core::marker::PhantomData<[T; N]>,
-    }
-
-    pub const fn __compare_sizes__<ARRAY, COMPOSED>(
-        _: core::marker::PhantomData<ARRAY>,
-        _: core::marker::PhantomData<COMPOSED>,
-    ) -> bool {
-        core::mem::size_of::<ARRAY>() == core::mem::size_of::<COMPOSED>()
-    }
 }
 
 #[allow(dead_code)]
