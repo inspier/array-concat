@@ -10,28 +10,22 @@ To add to your Cargo.toml:
 array-concat = "0.4.1"
 ```
 
-## Basic Usage
-
-```
-concat_arrays!(<comma-seperated arrays>; <copyable value to be used for array initialization>)
-```
-
 ## Example
 ```rust
 use array_concat::*;
 
 const A: [u32; 3] = [1, 2, 3];
 const B: [u32; 2] = [4, 5];
-const C: [u32; concat_arrays_size!(A, B)] = concat_arrays!(A, B; u32::MIN); // compiles
+const C: [u32; concat_arrays_size!(A, B)] = concat_arrays!(A, B); // compiles
 
 // Non-Copy struct
 struct S {}
 const D: [S; 1] = [S{}];
 const E: [S; 1] = [S{}];
-const F: [S; concat_arrays_size!(D, E)] = concat_arrays!(D, E; S{}); // doesn't compile
+const F: [S; concat_arrays_size!(D, E)] = concat_arrays!(D, E); // doesn't compile
 
 fn main() {
-    let c = concat_arrays!(A, B; u32::MIN);
+    let c = concat_arrays!(A, B);
     assert_eq!([1, 2, 3, 4, 5], C);
     assert_eq!([1, 2, 3, 4, 5], c);
 }

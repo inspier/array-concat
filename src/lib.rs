@@ -11,9 +11,8 @@ macro_rules! concat_arrays_size {
 /// Concatenates provided arrays.
 #[macro_export]
 macro_rules! concat_arrays {
-    ($( $array:tt ),*; $init_value:expr) => ({
+    ($( $array:tt ),*) => ({
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
-        let mut wrapper = $crate::internals::ArrayConcatWrapper { data: [$init_value; __ARRAY_SIZE__], _marker: core::marker::PhantomData };
 
         #[allow(non_snake_case)]
         #[derive(Clone, Copy)]
@@ -23,30 +22,36 @@ macro_rules! concat_arrays {
         }
 
         union ArrayConcatComposed<T: Copy> {
-            full: [T; __ARRAY_SIZE__],
+            full: $crate::internals::ArrayConcatWrapper<T, __ARRAY_SIZE__>,
             decomposed: ArrayConcatDecomposed<T>,
         }
 
-        let mut composed = ArrayConcatComposed { full: wrapper.data };
-        $(composed.decomposed.$array = $array;)*
+        let composed = ArrayConcatComposed { decomposed: ArrayConcatDecomposed { $($array,)* _marker: core::marker::PhantomData }};
+
         // Sanity check that the "default" initialized buffer and composed's decomposed field are the same size
-        ["Size mismatch"][!$crate::internals::__compare_sizes__(wrapper._marker, unsafe { composed.decomposed._marker }) as usize];
+        unsafe {
+        ["Size mismatch"][!$crate::internals::__compare_sizes__(composed.full._marker, composed.decomposed._marker) as usize];
 
         // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
-        wrapper.data = unsafe { composed.full };
-        wrapper.data
+        composed.full.data
+        }
     });
 }
 
 #[doc(hidden)]
 pub mod internals {
+    #[derive(Clone, Copy)]
+    #[repr(transparent)]
     pub struct ArrayConcatWrapper<T: Copy, const N: usize> {
         pub data: [T; N],
         pub _marker: core::marker::PhantomData<[T; N]>,
     }
 
-    pub const fn __compare_sizes__<A, C>(_: core::marker::PhantomData<A>, _: core::marker::PhantomData<C>) -> bool {
-        core::mem::size_of::<A>() == core::mem::size_of::<C>()
+    pub const fn __compare_sizes__<ARRAY, COMPOSED>(
+        _: core::marker::PhantomData<ARRAY>,
+        _: core::marker::PhantomData<COMPOSED>,
+    ) -> bool {
+        core::mem::size_of::<ARRAY>() == core::mem::size_of::<COMPOSED>()
     }
 }
 
@@ -61,16 +66,16 @@ mod tests {
 
     #[test]
     fn test_simple_concat() {
-        let d = concat_arrays!(A, B; u32::MIN);
-        const D: [u32; concat_arrays_size!(A, B)] = concat_arrays!(A, B; u32::MIN);
+        let d = concat_arrays!(A, B);
+        const D: [u32; concat_arrays_size!(A, B)] = concat_arrays!(A, B);
         assert_eq!([1, 2, 3, 4, 5, 6], D);
         assert_eq!([1, 2, 3, 4, 5, 6], d);
     }
 
     #[test]
     fn test_different_sizes() {
-        let e = concat_arrays!(A, C; u32::MIN);
-        const E: [u32; concat_arrays_size!(A, C)] = concat_arrays!(A, C; u32::MIN);
+        let e = concat_arrays!(A, C);
+        const E: [u32; concat_arrays_size!(A, C)] = concat_arrays!(A, C);
         assert_eq!([1, 2, 3, 4, 5], E);
         assert_eq!([1, 2, 3, 4, 5], e);
     }
