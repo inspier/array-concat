@@ -28,7 +28,7 @@ macro_rules! concat_arrays {
 
         let composed = ArrayConcatComposed { decomposed: ArrayConcatDecomposed { $($array,)* _marker: core::marker::PhantomData }};
 
-        // Sanity check that the "default" initialized buffer and composed's decomposed field are the same size
+        // Sanity check that composed's two fields are the same size
         unsafe {
         ["Size mismatch"][!$crate::internals::__compare_sizes__(composed.full._marker, composed.decomposed._marker) as usize];
 
