@@ -25,7 +25,7 @@ macro_rules! concat_arrays {
         }
 
         impl<T, const N: usize> ArrayConcatComposed<T, N> {
-            const fn compare_sizes(&self) -> bool {
+            const fn have_same_size(&self) -> bool {
                 core::mem::size_of::<[T; N]>() == core::mem::size_of::<Self>()
             }
         }
@@ -33,7 +33,7 @@ macro_rules! concat_arrays {
         let composed = ArrayConcatComposed { decomposed: core::mem::ManuallyDrop::new(ArrayConcatDecomposed { $($array,)* })};
 
         // Sanity check that composed's two fields are the same size
-        ["Size mismatch"][!composed.compare_sizes() as usize];
+        ["Size mismatch"][!composed.have_same_size() as usize];
 
         // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
         core::mem::ManuallyDrop::into_inner(unsafe { composed.full })
