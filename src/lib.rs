@@ -3,7 +3,7 @@
 /// Computes total size of all provided const arrays.
 #[macro_export]
 macro_rules! concat_arrays_size {
-    ($( $array:tt ),*) => {{
+    ($( $array:ident ),*) => {{
         0 $(+ $array.len())*
     }};
 }
@@ -11,7 +11,7 @@ macro_rules! concat_arrays_size {
 /// Concatenates provided arrays.
 #[macro_export]
 macro_rules! concat_arrays {
-    ($( $array:tt ),*) => ({
+    ($( $array:ident ),*) => ({
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
 
         #[allow(dead_code, non_snake_case)]
