@@ -15,6 +15,7 @@ macro_rules! concat_arrays {
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
 
         #[allow(dead_code, non_snake_case)]
+        #[repr(C)]
         struct ArrayConcatDecomposed<T> {
         $($array: [T; $array.len()],)*
         }
