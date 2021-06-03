@@ -19,6 +19,7 @@ macro_rules! concat_arrays {
         $($array: [T; $array.len()],)*
         }
 
+        #[repr(C)]
         union ArrayConcatComposed<T, const N: usize> {
             full: core::mem::ManuallyDrop<[T; N]>,
             decomposed: core::mem::ManuallyDrop<ArrayConcatDecomposed<T>>,
