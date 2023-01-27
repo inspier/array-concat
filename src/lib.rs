@@ -3,7 +3,7 @@
 /// Computes total size of all provided const arrays.
 #[macro_export]
 macro_rules! concat_arrays_size {
-    ($( $array:ident ),*) => {{
+    ($( $array:expr ),*) => {{
         0 $(+ $array.len())*
     }};
 }
@@ -11,14 +11,11 @@ macro_rules! concat_arrays_size {
 /// Concatenates provided arrays.
 #[macro_export]
 macro_rules! concat_arrays {
-    ($( $array:ident ),*) => ({
+    ($( $array:expr ),*) => ({
         const __ARRAY_SIZE__: usize = $crate::concat_arrays_size!($($array),*);
 
-        #[allow(dead_code, non_snake_case)]
         #[repr(C)]
-        struct ArrayConcatDecomposed<T> {
-        $($array: [T; $array.len()],)*
-        }
+        struct ArrayConcatDecomposed<T>($([T; $array.len()]),*);
 
         #[repr(C)]
         union ArrayConcatComposed<T, const N: usize> {
@@ -32,7 +29,7 @@ macro_rules! concat_arrays {
             }
         }
 
-        let composed = ArrayConcatComposed { decomposed: core::mem::ManuallyDrop::new(ArrayConcatDecomposed { $($array,)* })};
+        let composed = ArrayConcatComposed { decomposed: core::mem::ManuallyDrop::new(ArrayConcatDecomposed ( $($array),* ))};
 
         // Sanity check that composed's two fields are the same size
         ["Size mismatch"][!composed.have_same_size() as usize];
@@ -65,5 +62,13 @@ mod tests {
         const E: [u32; concat_arrays_size!(A, C)] = concat_arrays!(A, C);
         assert_eq!([1, 2, 3, 4, 5], E);
         assert_eq!([1, 2, 3, 4, 5], e);
+    }
+
+    #[test]
+    fn test_literal_arrays() {
+        let f = concat_arrays!(A, C, [6, 7, 8]);
+        const F: [u32; concat_arrays_size!(A, C, [6, 7, 8])] = concat_arrays!(A, C, [6, 7, 8]);
+        assert_eq!([1, 2, 3, 4, 5, 6, 7, 8], F);
+        assert_eq!([1, 2, 3, 4, 5, 6, 7, 8], f);
     }
 }
