@@ -9,3 +9,6 @@ license = "MIT"
 keywords = ["array", "concat"]
 categories = ["data-structures", "no-std"]
 readme = "README.md"
+
+[features]
+const_panic = []
