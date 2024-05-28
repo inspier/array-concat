@@ -16,14 +16,17 @@ macro_rules! concat_arrays {
         struct ArrayConcatDecomposed<T, A, B>(core::mem::ManuallyDrop<[T; 0]>, core::mem::ManuallyDrop<A>, core::mem::ManuallyDrop<B>);
 
         impl<T> ArrayConcatDecomposed<T, [T; 0], [T; 0]> {
+            #[inline(always)]
             const fn default() -> Self {
                 Self::new(core::mem::ManuallyDrop::new([]), [])
             }
         }
         impl<T, A, B> ArrayConcatDecomposed<T, A, B> {
+            #[inline(always)]
             const fn new(a: core::mem::ManuallyDrop<A>, b: B) -> Self {
                 Self(core::mem::ManuallyDrop::new([]), a, core::mem::ManuallyDrop::new(b))
             }
+            #[inline(always)]
             const fn concat<const N: usize>(self, v: [T; N]) -> ArrayConcatDecomposed<T, A, ArrayConcatDecomposed<T, B, [T; N]>> {
                 ArrayConcatDecomposed::new(self.1, ArrayConcatDecomposed::new(self.2, v))
             }
@@ -44,6 +47,7 @@ macro_rules! concat_arrays {
             #[cfg(not(feature="const_panic"))]
             const PANIC: bool = !["Size mismatch"][!Self::HAVE_SAME_SIZE as usize].is_empty();
 
+            #[inline(always)]
             const fn have_same_size(&self) -> bool {
                 Self::PANIC
             }
