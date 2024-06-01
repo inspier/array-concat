@@ -3,7 +3,7 @@
 
 # array-concat
 
-Macros for concatenating const arrays.
+Macros for concatenating arrays.
 
 To add to your Cargo.toml:
 ```toml
@@ -30,5 +30,10 @@ fn main() {
     assert_eq!([1, 2, 3, 4, 5], C);
     assert_eq!([1, 2, 3, 4, 5], c);
     assert_eq!([S(true), S(false)], F);
+
+    let a = [1, 2, 3];
+    let b = [4, 5];
+    let c = concat_arrays!(a, b); // Size is inferred by the assert below
+    assert_eq!([1, 2, 3, 4, 5], c);
 }
 ```
