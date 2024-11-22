@@ -41,11 +41,7 @@ macro_rules! concat_arrays {
         impl<T, A, B, const N: usize> ArrayConcatComposed<T, A, B, N> {
             const HAVE_SAME_SIZE: bool = core::mem::size_of::<[T; N]>() == core::mem::size_of::<Self>();
 
-            #[cfg(feature="const_panic")]
-            const PANIC: bool = Self::HAVE_SAME_SIZE || panic!("Size Mismatch");
-
-            #[cfg(not(feature="const_panic"))]
-            const PANIC: bool = !["Size mismatch"][!Self::HAVE_SAME_SIZE as usize].is_empty();
+            const PANIC: bool = $crate::_const_assert_same_size::<[T; N], Self>();
 
             #[inline(always)]
             const fn have_same_size(&self) -> bool {
@@ -65,6 +61,25 @@ macro_rules! concat_arrays {
         // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
         core::mem::ManuallyDrop::into_inner(unsafe { composed.full })
     });
+}
+
+/// Assert at compile time that these types have the same size.
+///
+/// This is an implementation detail of the crate and should only be used by the
+/// macros in this crate.
+#[doc(hidden)]
+pub const fn _const_assert_same_size<A, B>() -> bool {
+    let have_same_size = core::mem::size_of::<A>() == core::mem::size_of::<B>();
+
+    #[cfg(feature = "const_panic")]
+    {
+        return have_same_size || panic!("Size Mismatch");
+    }
+
+    #[cfg(not(feature = "const_panic"))]
+    {
+        return !["Size mismatch"][!have_same_size as usize].is_empty();
+    }
 }
 
 #[allow(dead_code)]
