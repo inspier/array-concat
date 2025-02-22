@@ -73,14 +73,14 @@ macro_rules! flatten_split {
     };
     // We can dramatically reduce macro recursion by adding an additional_case
     (($($tail:tt)*), $head:expr, $pop1:expr, $pop2:expr$(, $remaining:expr)+) => {
-        flatten_split!(
+        $crate::flatten_split!(
             ($head.1.2, $head.2, $($tail)*),
             $head.1.1$(,
             $remaining)+
         )
     };
     (($($tail:tt)*), $head:expr, $pop:expr$(, $remaining:expr)+) => {
-        flatten_split!(
+        $crate::flatten_split!(
             ($head.2, $($tail)*),
             $head.1$(,
             $remaining)+
