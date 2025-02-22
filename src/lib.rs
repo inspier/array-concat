@@ -222,7 +222,10 @@ mod tests {
         assert_eq!(([1, 2, 3, 4, 5], [6]), split_array!(d, 5, 1));
         assert_eq!(([1], [2, 3, 4, 5], [6]), split_array!(d, 1, 4, 1));
         assert_eq!(([1], [2, 3], [4, 5, 6]), split_array!(d, 1, 2, 3));
-        assert_eq!(([1], [2], [3], [4], [5], [6]), split_array!(d, 1, 1, 1, 1, 1, 1));
+        assert_eq!(
+            ([1], [2], [3], [4], [5], [6]),
+            split_array!(d, 1, 1, 1, 1, 1, 1)
+        );
     }
 
     #[test]
