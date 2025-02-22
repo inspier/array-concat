@@ -3,14 +3,16 @@
 
 # array-concat
 
-Macros for concatenating arrays.
+Macros for concatenating and splitting arrays.
 
 To add to your Cargo.toml:
+
 ```toml
 array-concat = "0.5.3"
 ```
 
 ## Example
+
 ```rust
 use array_concat::*;
 
@@ -30,6 +32,9 @@ fn main() {
     assert_eq!([1, 2, 3, 4, 5], C);
     assert_eq!([1, 2, 3, 4, 5], c);
     assert_eq!([S(true), S(false)], F);
+
+    // Split the array into three parts with lengths: 1, 3, and 1
+    assert_eq!(([1], [2, 3, 4], [5]), split_array!(c, 1, 3, 1));
 
     let a = [1, 2, 3];
     let b = [4, 5];
