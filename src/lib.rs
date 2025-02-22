@@ -183,12 +183,12 @@ pub const fn _const_assert_same_size<A, B>() -> bool {
 
     #[cfg(feature = "const_panic")]
     {
-        return have_same_size || panic!("Size Mismatch");
+        have_same_size || panic!("Size Mismatch")
     }
 
     #[cfg(not(feature = "const_panic"))]
     {
-        return !["Size mismatch"][!have_same_size as usize].is_empty();
+        !["Size mismatch"][!have_same_size as usize].is_empty()
     }
 }
 
