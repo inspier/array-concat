@@ -39,8 +39,6 @@ macro_rules! concat_arrays {
         }
 
         impl<T, A, B, const N: usize> ArrayConcatComposed<T, A, B, N> {
-            const HAVE_SAME_SIZE: bool = core::mem::size_of::<[T; N]>() == core::mem::size_of::<Self>();
-
             const PANIC: bool = $crate::_const_assert_same_size::<[T; N], Self>();
 
             #[inline(always)]
@@ -63,22 +61,134 @@ macro_rules! concat_arrays {
     });
 }
 
+/// Flatten a nested tuple based on the number of nestings.
+///
+/// This is an implementation detail of the crate and should only be used by the
+/// macros in this crate.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! flatten_split {
+    (($($tail:tt)*), $head:expr, $pop:expr) => {
+        ($head, $($tail)*)
+    };
+    // We can dramatically reduce macro recursion by adding an additional_case
+    (($($tail:tt)*), $head:expr, $pop1:expr, $pop2:expr$(, $remaining:expr)+) => {
+        $crate::flatten_split!(
+            ($head.1.2, $head.2, $($tail)*),
+            $head.1.1$(,
+            $remaining)+
+        )
+    };
+    (($($tail:tt)*), $head:expr, $pop:expr$(, $remaining:expr)+) => {
+        $crate::flatten_split!(
+            ($head.2, $($tail)*),
+            $head.1$(,
+            $remaining)+
+        )
+    };
+}
+
+/// Split the provided array into the specified sizes.
+#[macro_export]
+macro_rules! split_array {
+    ($array:expr, $size:expr) => ($array);
+    ($array:expr, $size0:expr, $($sizes:expr),+) => ({
+        struct ArrayConcatDecomposedMarkerBase<T, A>(core::marker::PhantomData<(T, A)>);
+        struct ArrayConcatDecomposedMarker<T, A, B>(core::marker::PhantomData<(T, A, B)>);
+
+        #[repr(C)]
+        struct ArrayConcatDecomposed<T, A, B>([T; 0], A, B);
+
+        trait Storage {
+            type Data;
+        }
+        impl<T, const A: usize> Storage for [T; A] {
+            type Data = [T; A];
+        }
+
+        impl<T> ArrayConcatDecomposedMarkerBase<T, ()> {
+            #[inline(always)]
+            const fn default(_: &[T]) -> Self {
+                Self(core::marker::PhantomData)
+            }
+            #[inline(always)]
+            const fn concat<const N: usize>(self, _: [(); N]) -> ArrayConcatDecomposedMarkerBase<T, [T; N]> {
+                ArrayConcatDecomposedMarkerBase(core::marker::PhantomData)
+            }
+        }
+        impl<T, const A: usize> ArrayConcatDecomposedMarkerBase<T, [T; A]> {
+            #[inline(always)]
+            const fn concat<const B: usize>(self, _: [(); B]) -> ArrayConcatDecomposedMarker<T, [T; A], [T; B]> {
+                ArrayConcatDecomposedMarker(core::marker::PhantomData)
+            }
+        }
+
+        impl<T, A: Storage, B: Storage> Storage for ArrayConcatDecomposedMarker<T, A, B> {
+            type Data = ArrayConcatDecomposed<T, A::Data, B::Data>;
+        }
+
+        impl<T, A: Storage, B: Storage> ArrayConcatDecomposedMarker<T, A, B> {
+            #[inline(always)]
+            const fn concat<const C: usize>(self, _: [(); C]) -> ArrayConcatDecomposedMarker<T, ArrayConcatDecomposedMarker<T, A, B>, [T; C]> {
+                ArrayConcatDecomposedMarker(core::marker::PhantomData)
+            }
+            #[inline(always)]
+            const fn make<const N: usize>(self, full: [T; N]) -> ArrayConcatDecomposed<T, A::Data, B::Data> {
+                #[repr(C)]
+                union ArrayConcatComposed<T, A, B, const N: usize> {
+                    full: core::mem::ManuallyDrop<[T; N]>,
+                    decomposed: core::mem::ManuallyDrop<ArrayConcatDecomposed<T, A, B>>,
+                }
+
+                impl<T, A, B, const N: usize> ArrayConcatComposed<T, A, B, N> {
+                    const PANIC: bool = $crate::_const_assert_same_size::<[T; N], Self>();
+
+                    #[inline(always)]
+                    const fn have_same_size(&self) -> bool {
+                        Self::PANIC
+                    }
+                }
+
+                let composed = ArrayConcatComposed::<T, A::Data, B::Data, N> {
+                    full: core::mem::ManuallyDrop::new(full)
+                };
+
+                // Sanity check that composed's two fields are the same size
+                composed.have_same_size();
+
+                // SAFETY: Sizes of both fields in composed are the same so this assignment should be sound
+                core::mem::ManuallyDrop::into_inner(unsafe { composed.decomposed })
+            }
+        }
+
+
+        let array = $array;
+        let decomposed = ArrayConcatDecomposedMarkerBase::default(&array)
+            .concat([(); $size0])
+            $(.concat([(); $sizes]))
+            *.make(array);
+
+        $crate::flatten_split!((), decomposed, $size0$(, $sizes)*)
+    });
+}
+
 /// Assert at compile time that these types have the same size.
 ///
 /// This is an implementation detail of the crate and should only be used by the
 /// macros in this crate.
+#[inline(always)]
 #[doc(hidden)]
 pub const fn _const_assert_same_size<A, B>() -> bool {
     let have_same_size = core::mem::size_of::<A>() == core::mem::size_of::<B>();
 
     #[cfg(feature = "const_panic")]
     {
-        return have_same_size || panic!("Size Mismatch");
+        have_same_size || panic!("Size Mismatch")
     }
 
     #[cfg(not(feature = "const_panic"))]
     {
-        return !["Size mismatch"][!have_same_size as usize].is_empty();
+        !["Size mismatch"][!have_same_size as usize].is_empty()
     }
 }
 
@@ -97,6 +207,25 @@ mod tests {
         const D: [u32; concat_arrays_size!(A, B)] = concat_arrays!(A, B);
         assert_eq!([1, 2, 3, 4, 5, 6], D);
         assert_eq!([1, 2, 3, 4, 5, 6], d);
+    }
+
+    #[test]
+    fn test_simple_split() {
+        let d: [u32; 6] = concat_arrays!(A, B);
+        const D: [u32; 6] = concat_arrays!(A, B);
+
+        const A_B: ([u32; 3], [u32; 3]) = split_array!(D, A.len(), B.len());
+
+        assert_eq!((A, B), A_B);
+        assert_eq!((A, B), split_array!(d, 3, 3));
+        assert_eq!(([1], [2, 3, 4, 5, 6]), split_array!(d, 1, 5));
+        assert_eq!(([1, 2, 3, 4, 5], [6]), split_array!(d, 5, 1));
+        assert_eq!(([1], [2, 3, 4, 5], [6]), split_array!(d, 1, 4, 1));
+        assert_eq!(([1], [2, 3], [4, 5, 6]), split_array!(d, 1, 2, 3));
+        assert_eq!(
+            ([1], [2], [3], [4], [5], [6]),
+            split_array!(d, 1, 1, 1, 1, 1, 1)
+        );
     }
 
     #[test]
