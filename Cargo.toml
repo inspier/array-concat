@@ -2,7 +2,7 @@
 name = "array-concat"
 version = "0.5.4"
 authors = ["inspier <devdevin541@gmail.com>"]
-edition = "2024"
+edition = "2018"
 description = "Macros for concatenating const arrays."
 repository = "https://github.com/inspier/array-concat"
 license = "MIT"
