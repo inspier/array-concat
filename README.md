@@ -8,7 +8,7 @@ Macros for concatenating and splitting arrays.
 To add to your Cargo.toml:
 
 ```toml
-array-concat = "0.5.3"
+array-concat = "0.5.4"
 ```
 
 ## Example
